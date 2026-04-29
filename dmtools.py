@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw, ImageEnhance
@@ -44,6 +45,9 @@ class MapViewer:
         self.load_directory()
         self.selected_image_path = None
         self.is_fullscreen = False
+        self.watch_job = None
+        self.watching_path = None
+
 
     def toggle_fullscreen(self):
         self.is_fullscreen = not self.is_fullscreen
@@ -191,41 +195,94 @@ class MapViewer:
             print("No image selected")
             return
 
-        src = Path(src_path)
+        if not os.path.exists(src_path):
+            print("File not found:", src_path)
+            return
 
-        if not src.exists():
-            raise FileNotFoundError(f"{src} not found")
+        filename = os.path.basename(src_path)
 
-        dst = src.with_stem(src.stem + "_copy")
+        # --- CASE 1: already edited → just open ---
+        if "fuckedwith" in filename.lower():
+            dst = src_path
 
-        shutil.copy2(src, dst)
+        else:
+            # --- CASE 2: original → copy into subfolder ---
+            parent_dir = os.path.dirname(src_path)
+            fw_dir = os.path.join(parent_dir, "fuckedwith")
 
+            os.makedirs(fw_dir, exist_ok=True)
+
+            name, ext = os.path.splitext(filename)
+            timestamp = time.strftime("%Y%m%d-%H%M")
+
+            new_name = f"{name}-fuckedwith-{timestamp}{ext}"
+            dst = os.path.join(fw_dir, new_name)
+
+            shutil.copy2(src_path, dst)
+
+            # switch viewer to new copy
+            self.selected_image_path = dst
+            self.load_image(dst)
+            self.load_directory()
+
+        # --- start watcher ---
+        self.watch_file(dst)
+
+        # --- open editor ---
         system = platform.system()
 
         try:
             if system == "Windows":
-                subprocess.Popen(["mspaint", str(dst)])
+                subprocess.Popen(["mspaint", dst])
 
             elif system == "Linux":
-                for editor in ["kolourpaint", "pinta", "gimp", "xdg-open"]:
+                for editor in ["kolourpaint", "drawing", "mtpaint" ]:
                     try:
-                        subprocess.Popen([editor, str(dst)])
+                        subprocess.Popen([editor, dst])
                         break
                     except FileNotFoundError:
                         continue
-                else:
-                    raise RuntimeError("No suitable image editor found")
 
             elif system == "Darwin":
-                subprocess.Popen(["open", str(dst)])
-
-            else:
-                raise RuntimeError(f"Unsupported OS: {system}")
+                subprocess.Popen(["open", dst])
 
         except Exception as e:
-            print(f"Failed to open editor: {e}")
+            print("Editor launch failed:", e)
 
         return dst
+
+
+    def watch_file(self, path):
+        # cancel previous watcher if it exists
+        if hasattr(self, "watch_job") and self.watch_job:
+            self.root.after_cancel(self.watch_job)
+
+        try:
+            self.last_mtime = os.path.getmtime(path)
+        except:
+            return
+
+        self.watching_path = path
+
+        def check():
+            try:
+                # ignore if user switched images
+                if self.selected_image_path != self.watching_path:
+                    return
+
+                mtime = os.path.getmtime(path)
+                if mtime != self.last_mtime:
+                    self.last_mtime = mtime
+                    self.load_image(path)
+                    self.load_directory()
+
+            except FileNotFoundError:
+                pass
+
+            self.watch_job = self.root.after(1000, check)
+
+        check()
+
 
     def cycle_grid(self):
         val = (self.grid_state.get() + 1) % 3
@@ -256,6 +313,7 @@ class MapViewer:
         if os.path.commonpath([parent, BASE_DIR]) == BASE_DIR:
             self.current_dir = parent
             self.load_directory()
+
 
     def enter_dir(self, path):
         self.current_dir = path
