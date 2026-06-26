@@ -1,0 +1,1 @@
+{"entries": ["26: Glock", "20: Wren", "20: Goblin1", "18: Orc1", "17: Bud", "14: Orc2", "12: Dude", " 9: Gnome.IO", " 9: Archmage", " 7: Ducky", " 5: Grizzles", " 3: Aracarn?", "-1: Nyx", ""], "turn_index": 5}
