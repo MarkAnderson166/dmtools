@@ -83,19 +83,18 @@ class MainApplication(tk.Tk):
 
     x_offset = 0
     y_offset = 0
-    '''
+
     try:
       monitors = get_monitors()
       if len(monitors) > 1:
         # pick second monitor if available
-        m = sorted(monitors, key=lambda m: m.x)[-1]
+        m = sorted(monitors, key=lambda m: m.x)[0]
         x_offset = m.x
         y_offset = m.y
         screen_w = m.width
         screen_h = m.height
     except:
       pass  # fallback stays primary screen
-    '''
 
     self.view_offset_x = x_offset
     self.view_offset_y = y_offset
@@ -495,6 +494,21 @@ class MainApplication(tk.Tk):
 
 
       # mapcontrol Buttons
+    self.folder_up_button = ttk.Button(self, text="back", width=width, command=self.go_up, style="TButton",)
+    self.folder_up_button.grid(row=12, column=3, rowspan=1, columnspan=1, padx=padding, pady=padding, sticky="nsew")
+   
+    self.rotate_button = ttk.Button(self, text="Rotate", width=width, command=rotate_image, style="TButton",)
+    self.rotate_button.grid(row=11, column=3, rowspan=1, columnspan=1, padx=padding, pady=padding, sticky="nsew")
+
+    self.mirror_button = ttk.Button(self, text="mirror", width=width, command=self.mirror_image, style="TButton",)
+    self.mirror_button.grid(row=10, column=3, rowspan=1, columnspan=1, padx=padding, pady=padding, sticky="nsew")
+  
+    self.grid_button = ttk.Button(self, text="Grid Toggle", width=width, command=self.cycle_grid, style="TButton",)
+    self.grid_button.grid(row=9, column=3, rowspan=1, columnspan=1, padx=padding, pady=padding, sticky="nsew")
+
+    self.fullscreen_button = ttk.Button(self, text="", width=width, command=self.toggle_fullscreen, style="TButton",)
+    self.fullscreen.grid(row=8, column=3, rowspan=1, columnspan=1, padx=padding, pady=padding, sticky="nsew")
+
     '''
     ttk.Button(self, text="Up", command=self.go_up).pack(side="left", padx=5, pady=5)
     ttk.Button(self, text="Refresh", command=self.load_directory).pack(side="left", padx=5, pady=5)
@@ -823,6 +837,9 @@ class MainApplication(tk.Tk):
 
 
 if __name__ == "__main__":
+
+  subprocess.run(["git","pull"], cwd=Path(__file__).resolve().parent.parent / "battle-maps")
+
   app = MainApplication()
   app.mainloop()
 
