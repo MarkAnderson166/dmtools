@@ -1,2 +1,2 @@
 # dmtools
-Battlemap manager &amp; init tracker
+Battlemap manager
