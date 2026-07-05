@@ -4,7 +4,6 @@ import time
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw, ImageEnhance
-#from screeninfo import get_monitors
 import shutil
 import platform
 import subprocess
@@ -55,6 +54,20 @@ class MapViewer:
 
         x_offset = 0
         y_offset = 0
+
+        try:
+            from screeninfo import get_monitors
+            monitors = get_monitors()
+            if len(monitors) > 1:
+                # pick second monitor if available
+                m = sorted(monitors, key=lambda m: m.x)[0]
+                x_offset = m.x
+                y_offset = m.y
+                screen_w = m.width
+                screen_h = m.height
+        except:
+            pass  # fallback stays primary screen
+
         self.view_offset_x = x_offset
         self.view_offset_y = y_offset
         self.view_w = screen_w
