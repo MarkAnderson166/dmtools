@@ -4,7 +4,7 @@ import time
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw, ImageEnhance
-from screeninfo import get_monitors
+#from screeninfo import get_monitors
 import shutil
 import platform
 import subprocess
@@ -20,19 +20,15 @@ class MapViewer:
     def __init__(self, root):
         self.root = root
         self.root.title("Map Control")
-
+        self.root.geometry("570x600")
         self.current_dir = BASE_DIR
         self.image_cache = {}
         self.current_image = None
-
         self.zoom = 1.0
-
         self.grid_state = tk.IntVar(value=0)
         self.grid_enabled = tk.BooleanVar(value=False)
-
         self.image_offset_x = tk.IntVar(value=0)
         self.image_offset_y = tk.IntVar(value=0)
-
         self.setup_ui()
         self.setup_viewer()
         self.load_directory()
@@ -52,31 +48,13 @@ class MapViewer:
     def setup_viewer(self):
         self.viewer = tk.Toplevel(self.root)
         self.viewer.configure(bg="black")
-
         self.viewer.update_idletasks()
 
-        # default fallback = full screen
         screen_w = self.viewer.winfo_screenwidth()
         screen_h = self.viewer.winfo_screenheight()
 
         x_offset = 0
         y_offset = 0
-
-        try:
-            from screeninfo import get_monitors
-            monitors = get_monitors()
-
-            if len(monitors) > 1:
-                # pick second monitor if available
-                m = sorted(monitors, key=lambda m: m.x)[1]
-                x_offset = m.x
-                y_offset = m.y
-                screen_w = m.width
-                screen_h = m.height
-
-        except:
-            pass  # fallback stays primary screen
-
         self.view_offset_x = x_offset
         self.view_offset_y = y_offset
         self.view_w = screen_w
@@ -88,66 +66,43 @@ class MapViewer:
         self.canvas = tk.Canvas(self.viewer, bg="black", highlightthickness=0)
         self.canvas.pack(fill="both", expand=True)
 
+
     def setup_ui(self):
-        top = ttk.Frame(self.root)
-        top.pack(fill="x")
 
-        ttk.Button(top, text="Up", command=self.go_up).pack(side="left", padx=5, pady=5)
+        # Zoom and offset  controls
+        adj_frame = ttk.Frame(self.root)
+        adj_frame.pack(side = "left", padx=10, pady=10)
+        tk.Button(adj_frame, text="Z+", command=lambda: self.change_zoom(1.1), width=3, height=2).pack()
+        tk.Button(adj_frame, text="Z-", command=lambda: self.change_zoom(1/1.1), width=3, height=2).pack()
+        tk.Button(adj_frame, text="Z=", command=lambda: self.change_zoom(99), width=3, height=2).pack()
+        tk.Button(adj_frame, text="X+", command=lambda: self.change_image_offset(10, 0), width=3, height=2).pack()
+        tk.Button(adj_frame, text="X-", command=lambda: self.change_image_offset(-10, 0), width=3, height=2).pack()
+        tk.Button(adj_frame, text="X=", command=lambda: self.change_image_offset(99, 0), width=3, height=2).pack()
+        tk.Button(adj_frame, text="Y+", command=lambda: self.change_image_offset(0, 10), width=3, height=2).pack()
+        tk.Button(adj_frame, text="Y-", command=lambda: self.change_image_offset(0, -10), width=3, height=2).pack()
+        tk.Button(adj_frame, text="Y=", command=lambda: self.change_image_offset(0, 99), width=3, height=2).pack()
 
-        self.grid_btn = tk.Button(top, text="GRID OFF", bg="red", fg="white",
-                                  command=self.cycle_grid, height=2)
-        self.grid_btn.pack(side="left", padx=10)
-
-        # Grid controls
-        grid_controls = ttk.Frame(self.root)
-        grid_controls.pack(fill="x")
-
-        ttk.Button(top, text="Fullscreen", command=self.toggle_fullscreen).pack(side="left", padx=5, pady=5)
-
-        button = tk.Button(top, text="Edit Copy", command=self.copy_and_open_image).pack(side="left", padx=5, pady=5)
-
-        # Zoom controls
-        zf = ttk.Frame(grid_controls)
-        zf.pack(side="left", padx=10)
-        ttk.Label(zf, text="Zoom").pack()
-        tk.Button(zf, text="+", command=lambda: self.change_zoom(1.1), width=3, height=2).pack()
-        tk.Button(zf, text="-", command=lambda: self.change_zoom(1/1.1), width=3, height=2).pack()
-        tk.Button(zf, text="1", command=lambda: self.change_zoom(99), width=3, height=2).pack()
-
-        # Image position offset controls
-        of = ttk.Frame(grid_controls)
-        of.pack(side="left", padx=10)
-        ttk.Label(of, text="Image X Offset").pack()
-        tk.Button(of, text="+", command=lambda: self.change_image_offset(10, 0), width=3, height=2).pack()
-        tk.Button(of, text="-", command=lambda: self.change_image_offset(-10, 0), width=3, height=2).pack()
-        tk.Button(of, text="0", command=lambda: self.change_image_offset(99, 0), width=3, height=2).pack()
-
-        ofy = ttk.Frame(grid_controls)
-        ofy.pack(side="left", padx=10)
-        ttk.Label(ofy, text="Image Y Offset").pack()
-        tk.Button(ofy, text="+", command=lambda: self.change_image_offset(0, 10), width=3, height=2).pack()
-        tk.Button(ofy, text="-", command=lambda: self.change_image_offset(0, -10), width=3, height=2).pack()
-        tk.Button(ofy, text="0", command=lambda: self.change_image_offset(0, 99), width=3, height=2).pack()
+        # System controls
+        butt_frame = ttk.Frame(self.root)
+        butt_frame.pack(pady=10)
+        tk.Button(butt_frame, text="Back", command=self.go_up, width=10, height=2).pack(padx=5, pady=5, side="left")
+        self.grid_btn = tk.Button(butt_frame, text="Grid", command=self.cycle_grid, width=4, height=2)
+        self.grid_btn.pack(padx=5, pady=5, side="left")
+        tk.Button(butt_frame,text="Fullscreen",command=self.toggle_fullscreen,width=7,height=2).pack(padx=5,pady=5, side="left")
+        tk.Button(butt_frame,text="Edit",command=self.copy_and_open_image,width=4,height=2).pack(padx=5,pady=5, side="left")
 
         # Scrollable file view
         container = tk.Frame(self.root)
-        container.pack(fill="both", expand=True)
-
+        container.pack(side="right", fill="both", expand=True)
         self.scroll_canvas = tk.Canvas(container)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.scroll_canvas.yview)
-
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=self.scroll_canvas.yview)
         self.inner_frame = ttk.Frame(self.scroll_canvas)
-
-        self.inner_frame.bind(
-            "<Configure>",
-            lambda e: self.scroll_canvas.configure(scrollregion=self.scroll_canvas.bbox("all"))
-        )
-
+        self.inner_frame.bind("<Configure>", lambda e: self.scroll_canvas.configure(scrollregion=self.scroll_canvas.bbox("all")))
         self.scroll_canvas.create_window((0, 0), window=self.inner_frame, anchor="nw")
         self.scroll_canvas.configure(yscrollcommand=scrollbar.set)
-
         self.scroll_canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+        scrollbar.configure(width=20)
 
     def copy_and_open_image(self):
         src_path = self.selected_image_path
@@ -228,15 +183,15 @@ class MapViewer:
         val = (self.grid_state.get() + 1) % 5
         self.grid_state.set(val)
         if val == 0:
-            self.grid_btn.config(text="GRID", bg="red")
+            self.grid_btn.config(text="Grid")
         elif val == 1:
-            self.grid_btn.config(text="SQR1", bg="grey")
+            self.grid_btn.config(text="Sqr1")
         elif val == 2:
-            self.grid_btn.config(text="SQR2", bg="black")
+            self.grid_btn.config(text="Sqr2")
         elif val == 3:
-            self.grid_btn.config(text="HEX1", bg="grey")
+            self.grid_btn.config(text="Hex1")
         else:
-            self.grid_btn.config(text="HEX2", bg="black")
+            self.grid_btn.config(text="Hex2")
         self.redraw()
 
     def change_zoom(self, factor):
@@ -282,13 +237,13 @@ class MapViewer:
             full_path = os.path.join(self.current_dir, item)
 
             if os.path.isdir(full_path):
-                btn = tk.Button(self.inner_frame, text=f"[{item}]",
+                btn = tk.Button(self.inner_frame, text=f"{item}",
                                 command=lambda p=full_path: self.enter_dir(p),
-                                width=13, height=2)
+                                width=10, height=2)
                 btn.grid(row=row, column=col, padx=5, pady=5)
 
                 col += 1
-                if col > 4:
+                if col > 3:
                     col = 0
                     row += 1
 
@@ -304,14 +259,13 @@ class MapViewer:
                 btn.grid(row=row, column=col, padx=5, pady=5)
 
                 col += 1
-                if col > 4:
+                if col > 3:
                     col = 0
                     row += 1
 
     def get_thumbnail(self, path):
         if path in self.image_cache:
             return self.image_cache[path]
-
         img = Image.open(path)
         img.thumbnail(THUMB_SIZE)
         tk_img = ImageTk.PhotoImage(img)
@@ -321,17 +275,11 @@ class MapViewer:
 
     def load_image(self, path):
         self.current_image = Image.open(path)
-
         self.redraw()
 
     def toggle_grid(self):
         val = not self.grid_enabled.get()
         self.grid_enabled.set(val)
-
-        self.grid_btn.config(
-            text="GRID ON" if val else "GRID OFF",
-            bg="green" if val else "red"
-        )
         self.redraw()
 
     # ------------------------
