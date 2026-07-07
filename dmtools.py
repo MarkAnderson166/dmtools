@@ -74,8 +74,8 @@ class MapViewer:
                 m = sorted(monitors, key=lambda m: m.x)[0]
                 x_offset = m.x
                 y_offset = m.y
-                screen_w = m.width
-                screen_h = m.height
+                screen_w = m.height#width
+                screen_h = m.width#height
         except:
             pass  # fallback stays primary screen
 
@@ -227,8 +227,6 @@ class MapViewer:
                 "outline": outline
             }
 
-        # cone: wedge centered at start point, pointing from start -> end
-        # We'll interpret start as cone apex, end as direction+length.
         ax, ay = x0, y0
         dx, dy = (x1 - x0, y1 - y0)
         dist = math.hypot(dx, dy)
@@ -237,11 +235,10 @@ class MapViewer:
 
         ang = math.atan2(dy, dx)
 
-        # aperture and length scaling
-        aperture_deg = 45  # tweak to taste
+        aperture_deg = 53
         half = math.radians(aperture_deg / 2)
 
-        length = dist  # length of cone roughly equals drag distance
+        length = dist  
         s = length
 
         a1 = ang - half
@@ -250,8 +247,6 @@ class MapViewer:
         p1 = (ax + math.cos(a1) * s, ay + math.sin(a1) * s)
         p2 = (ax + math.cos(a2) * s, ay + math.sin(a2) * s)
 
-        # Optional: slightly rounded wedge by adding intermediate points
-        # For now: simple triangle wedge with 3 points.
         return {
             "type": "cone",
             "apex": (ax, ay),
@@ -268,7 +263,6 @@ class MapViewer:
         if shape["type"] == "circle":
             return shape["r"] >= 3
         if shape["type"] == "cone":
-            # simple threshold on triangle size
             ax, ay = shape["apex"]
             p1x, p1y = shape["p1"]
             p2x, p2y = shape["p2"]
@@ -341,7 +335,7 @@ class MapViewer:
             bg.paste(img, (paste_x, paste_y))
             bg = bg.convert("RGBA")
 
-        # Composite grid overlay
+        # grid overlay
         if gs_val != 0:
             overlay = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
             draw = ImageDraw.Draw(overlay)
